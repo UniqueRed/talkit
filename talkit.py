@@ -274,12 +274,25 @@ class Transcriber:
     def __init__(self):
         import mlx_whisper  # imported lazily: it's slow to load
         self._mw = mlx_whisper
+        self._model = self._resolve_model(WHISPER_MODEL)
+
+    @staticmethod
+    def _resolve_model(name: str) -> str:
+        """Use the locally cached model when there is one, so startup never waits on the network."""
+        if Path(name).expanduser().is_dir():
+            return str(Path(name).expanduser())
+        from huggingface_hub import snapshot_download
+        try:
+            return snapshot_download(name, local_files_only=True)
+        except Exception:
+            log(f"downloading Whisper model {name} (about 1.6 GB for the default)…")
+            return snapshot_download(name)
 
     def warm_up(self):
         self.transcribe(np.zeros(SAMPLE_RATE, np.float32))
 
     def transcribe(self, audio: np.ndarray, context: str = "") -> str:
-        kwargs = dict(path_or_hf_repo=WHISPER_MODEL, language=LANGUAGE, verbose=None,
+        kwargs = dict(path_or_hf_repo=self._model, language=LANGUAGE, verbose=None,
                       condition_on_previous_text=False)
         prompt = " ".join(x for x in (f"Vocabulary: {VOCAB}." if VOCAB else "", context) if x)
         if prompt:
@@ -816,7 +829,7 @@ class TalkitApp(rumps.App):
 
     def _worker(self):
         t0 = time.monotonic()
-        log("loading Whisper model (first run downloads ~1.6 GB)…")
+        log("loading Whisper model…")
         try:
             self.transcriber = Transcriber()
             self.transcriber.warm_up()
