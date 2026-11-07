@@ -1,0 +1,8 @@
+mlx-whisper
+sounddevice
+numpy
+rumps
+pyobjc-framework-Quartz
+pyobjc-framework-Cocoa
+anthropic
+pyobjc-framework-WebKit
