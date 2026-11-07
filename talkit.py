@@ -1,5 +1,5 @@
 """
-Flow — push-to-talk dictation for macOS (a Wispr Flow-style tool).
+Talkit — push-to-talk dictation for macOS (a Wispr Flow-style tool).
 
 Hold Right Option, speak, release: your words are transcribed locally with
 Whisper (MLX, Apple Silicon), optionally polished by Claude, and pasted into
@@ -9,7 +9,7 @@ whatever app has focus.
   Double-tap Right Option  -> hands-free mode (tap again to finish)
   Esc while recording      -> cancel
 
-Continuous mode (menu bar → "Continuous transcript", or `flow.py --continuous`)
+Continuous mode (menu bar → "Continuous transcript", or `talkit.py --continuous`)
 keeps the mic open, detects speech automatically, and appends everything you
 say to a timestamped transcript file — no key holding required.
 """
@@ -42,22 +42,22 @@ from PyObjCTools import AppHelper
 # Config (override with environment variables)
 # ----------------------------------------------------------------------------
 
-WHISPER_MODEL = os.environ.get("FLOW_WHISPER_MODEL", "mlx-community/whisper-large-v3-turbo")
-LANGUAGE = os.environ.get("FLOW_LANGUAGE") or None  # e.g. "en"; None = auto-detect
-CLEANUP_MODEL = os.environ.get("FLOW_CLEANUP_MODEL", "claude-opus-5-5")
-CLEANUP_DEFAULT = os.environ.get("FLOW_CLEANUP", "auto")  # "on" | "off" | "auto" (on if key present)
-VOCAB = os.environ.get("FLOW_VOCAB", "")  # comma-separated names/jargon to bias Whisper
-HOTKEY_KEYCODE = int(os.environ.get("FLOW_HOTKEY_KEYCODE", "61"))  # 61 = Right Option
+WHISPER_MODEL = os.environ.get("TALKIT_WHISPER_MODEL", "mlx-community/whisper-large-v3-turbo")
+LANGUAGE = os.environ.get("TALKIT_LANGUAGE") or None  # e.g. "en"; None = auto-detect
+CLEANUP_MODEL = os.environ.get("TALKIT_CLEANUP_MODEL", "claude-opus-5-5")
+CLEANUP_DEFAULT = os.environ.get("TALKIT_CLEANUP", "auto")  # "on" | "off" | "auto" (on if key present)
+VOCAB = os.environ.get("TALKIT_VOCAB", "")  # comma-separated names/jargon to bias Whisper
+HOTKEY_KEYCODE = int(os.environ.get("TALKIT_HOTKEY_KEYCODE", "61"))  # 61 = Right Option
 SAMPLE_RATE = 16_000
 MIN_HOLD_S = 0.30          # shorter presses count as taps, not dictation
 DOUBLE_TAP_WINDOW_S = 0.45
 MIN_RMS = 0.004            # below this the clip is treated as silence
-HISTORY_FILE = Path.home() / ".local" / "share" / "flow" / "history.jsonl"
-TRANSCRIPT_DIR = Path(os.environ.get("FLOW_TRANSCRIPT_DIR", Path.home() / "Documents" / "Flow Transcripts"))
+HISTORY_FILE = Path.home() / ".local" / "share" / "talkit" / "history.jsonl"
+TRANSCRIPT_DIR = Path(os.environ.get("TALKIT_TRANSCRIPT_DIR", Path.home() / "Documents" / "Talkit Transcripts"))
 
 # Continuous-mode speech segmentation
 VAD_BLOCK = 512                 # samples per analysis block (32 ms)
-VAD_MIN_THRESHOLD = float(os.environ.get("FLOW_VAD_THRESHOLD", "0.008"))  # absolute RMS floor for "speech"
+VAD_MIN_THRESHOLD = float(os.environ.get("TALKIT_VAD_THRESHOLD", "0.008"))  # absolute RMS floor for "speech"
 VAD_NOISE_MULT = 3.0            # speech must also be this many times louder than the background noise
 VAD_END_SILENCE_S = 0.9         # this much silence ends an utterance
 VAD_PREROLL_S = 0.3             # audio kept from before speech started, so first syllables aren't clipped
@@ -422,9 +422,9 @@ def level_to_meter(rms: float) -> float:
     return float(min(1.0, max(0.0, (db + 60) / 50)))
 
 
-class FlowApp(rumps.App):
+class TalkitApp(rumps.App):
     def __init__(self, start_continuous: bool = False, show_window: bool = True):
-        super().__init__("Flow", title=ICON_BUSY, quit_button=None)
+        super().__init__("Talkit", title=ICON_BUSY, quit_button=None)
         self.recorder = Recorder()
         self.jobs: queue.PriorityQueue[Job] = queue.PriorityQueue()
         self._seq = itertools.count()
@@ -461,7 +461,7 @@ class FlowApp(rumps.App):
         self.recent_menu.add(rumps.MenuItem("(nothing yet)"))
         self.menu = [
             self.status_item,
-            rumps.MenuItem("Open Flow Window", callback=lambda _: self.win and self.win.show()),
+            rumps.MenuItem("Open Talkit Window", callback=lambda _: self.win and self.win.show()),
             None,
             self.continuous_item,
             rumps.MenuItem("Open transcripts folder", callback=lambda _: self.open_transcripts()),
@@ -470,7 +470,7 @@ class FlowApp(rumps.App):
             self.recent_menu,
             None,
             rumps.MenuItem("Hold Right ⌥ to talk · double-tap for hands-free · Esc cancels"),
-            rumps.MenuItem("Quit Flow", callback=lambda _: self.quit()),
+            rumps.MenuItem("Quit Talkit", callback=lambda _: self.quit()),
         ]
         for d in reversed(self.dictations[:8]):
             self.add_recent(d["text"])
@@ -578,7 +578,7 @@ class FlowApp(rumps.App):
         elif cmd == "setCleanup":
             self.cleanup_enabled = bool(msg.get("value"))
             if self.cleanup_enabled and self.cleaner is None:
-                self.toast("AI cleanup needs ANTHROPIC_API_KEY set before launching Flow")
+                self.toast("AI cleanup needs ANTHROPIC_API_KEY set before launching Talkit")
             self._refresh()
         elif cmd == "selectSession":
             path = self._session_path(msg.get("id"))
@@ -909,13 +909,13 @@ def main():
     ap.add_argument("--no-window", action="store_true",
                     help="start in the menu bar only (open the window from the 🎙 menu)")
     args = ap.parse_args()
-    log(f"Flow starting · whisper={WHISPER_MODEL} · cleanup model={CLEANUP_MODEL}")
-    try:  # show "Flow" rather than "Python" in the menu bar and Dock
+    log(f"Talkit starting · whisper={WHISPER_MODEL} · cleanup model={CLEANUP_MODEL}")
+    try:  # show "Talkit" rather than "Python" in the menu bar and Dock
         from Foundation import NSBundle
-        NSBundle.mainBundle().infoDictionary()["CFBundleName"] = "Flow"
+        NSBundle.mainBundle().infoDictionary()["CFBundleName"] = "Talkit"
     except Exception:
         pass
-    FlowApp(start_continuous=args.continuous, show_window=not args.no_window).run()
+    TalkitApp(start_continuous=args.continuous, show_window=not args.no_window).run()
 
 
 if __name__ == "__main__":

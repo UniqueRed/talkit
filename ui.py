@@ -75,18 +75,18 @@ class MainWindow:
 
         config = WKWebViewConfiguration.alloc().init()
         self._bridge = _Bridge.alloc().initWithHandler_(self._on_message(on_message))
-        config.userContentController().addScriptMessageHandler_name_(self._bridge, "flow")
+        config.userContentController().addScriptMessageHandler_name_(self._bridge, "talkit")
 
         rect = NSMakeRect(0, 0, 980, 660)
         style = (NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
                  | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable)
         self.window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
             rect, style, NSBackingStoreBuffered, False)
-        self.window.setTitle_("Flow")
+        self.window.setTitle_("Talkit")
         self.window.setMinSize_(NSMakeSize(720, 440))
         self.window.setReleasedWhenClosed_(False)
-        self.window.setFrameAutosaveName_("FlowMainWindow")
-        if not self.window.setFrameUsingName_("FlowMainWindow"):
+        self.window.setFrameAutosaveName_("TalkitMainWindow")
+        if not self.window.setFrameUsingName_("TalkitMainWindow"):
             self.window.center()
         self._delegate = _WindowDelegate.alloc().initWithOwner_(self)
         self.window.setDelegate_(self._delegate)
@@ -114,7 +114,7 @@ class MainWindow:
     # ---- Python -> JS -----------------------------------------------------
 
     def send(self, obj: dict):
-        js = f"window.flow && flow.receive({json.dumps(obj)})"
+        js = f"window.talkit && talkit.receive({json.dumps(obj)})"
         if self._ready:
             self._eval(js)
         elif obj.get("type") != "level":
@@ -168,10 +168,10 @@ class MainWindow:
             top.setSubmenu_(menu)
             main.addItem_(top)
 
-        submenu("Flow", [
-            ("Hide Flow", "hide:", "h", None),
+        submenu("Talkit", [
+            ("Hide Talkit", "hide:", "h", None),
             (None, None, None, None),
-            ("Quit Flow", "quit:", "q", self._menu_target),
+            ("Quit Talkit", "quit:", "q", self._menu_target),
         ])
         submenu("Edit", [
             ("Undo", "undo:", "z", None),

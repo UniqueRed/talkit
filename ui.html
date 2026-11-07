@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Flow</title>
+<title>Talkit</title>
 <style>
   :root {
     --bg: #f6f5f2;
@@ -197,7 +197,7 @@
 <body>
 <aside>
   <div class="brand">
-    <h1>Flow</h1>
+    <h1>Talkit</h1>
     <span class="pill" id="pill" data-s="loading"><span class="dot"></span><span id="pillText">Loading model…</span></span>
   </div>
 
@@ -235,7 +235,7 @@
 <main>
   <header>
     <div class="titles">
-      <h2 id="title">Flow</h2>
+      <h2 id="title">Talkit</h2>
       <div class="meta" id="meta"></div>
     </div>
     <input class="search" id="search" placeholder="Search" type="search">
@@ -259,7 +259,7 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
-const post = (msg) => window.webkit?.messageHandlers?.flow?.postMessage(JSON.stringify(msg));
+const post = (msg) => window.webkit?.messageHandlers?.talkit?.postMessage(JSON.stringify(msg));
 window.onerror = (msg, src, line, col) => { post({ cmd: "jsError", msg: `${msg} (line ${line}:${col})` }); };
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -346,7 +346,7 @@ function renderHeader() {
     $("copyBtn").disabled = $("exportBtn").disabled = !S.dictations.length;
   } else {
     $("title").textContent = "Activity";
-    $("meta").textContent = "What Flow is doing behind the scenes";
+    $("meta").textContent = "What Talkit is doing behind the scenes";
   }
   const fmts = S.view === "dictations" ? DICTATION_FORMATS : SESSION_FORMATS;
   $("exportMenu").innerHTML = fmts.map(([f, label, ext]) => `<button data-format="${f}">${label}<span>${ext}</span></button>`).join("");
@@ -416,7 +416,7 @@ function selectSession(id) {
 function setView(v) { S.touched = true; S.view = v; S.query = ""; $("search").value = ""; render(false); }
 
 // ---------- messages from Python ----------
-window.flow = {
+window.talkit = {
   receive(m) {
     switch (m.type) {
       case "state": {
